@@ -34,6 +34,7 @@ import com.podio.item.ItemUpdate;
 import com.podio.item.ItemsResponse;
 import com.podio.oauth.OAuthClientCredentials;
 import com.podio.oauth.OAuthUsernameCredentials;
+import com.podio.tag.TagAPI;
 import com.podio.user.UserMini;
 import com.podio.zendesk.APIFactory;
 import com.podio.zendesk.attachment.Attachment;
@@ -45,6 +46,7 @@ import com.sun.jersey.api.client.UniformInterfaceException;
 
 public class ZendeskPublisher {
 
+	private static final String DEFAULT_PHOTO_FILENAME = "user_sm.png";
 	private static final int VIEW_ALL = 47845;
 	private static final int VIEW_UPDATED_LAST_HOUR = 1992333;
 
@@ -103,9 +105,9 @@ public class ZendeskPublisher {
 						.getProperty("podio.user.password")));
 	}
 
-	private ItemBadge getPodioTicket(int ticketId) {
+	private ItemBadge getPodioTicket(int zendeskTicketId) {
 		ItemsResponse response = new ItemAPI(podioAPI).getItemsByExternalId(
-				TICKET_APP_ID, Integer.toString(ticketId));
+				TICKET_APP_ID, Integer.toString(zendeskTicketId));
 		if (response.getFiltered() < 1) {
 			return null;
 		}
@@ -113,9 +115,9 @@ public class ZendeskPublisher {
 		return response.getItems().get(0);
 	}
 
-	private ItemBadge getPodioRequester(int requesterId) {
+	private ItemBadge getPodioRequester(int zendeskRequesterId) {
 		ItemsResponse response = new ItemAPI(podioAPI).getItemsByExternalId(
-				REQUESTER_APP_ID, Integer.toString(requesterId));
+				REQUESTER_APP_ID, Integer.toString(zendeskRequesterId));
 		if (response.getFiltered() < 1) {
 			return null;
 		}
@@ -124,26 +126,28 @@ public class ZendeskPublisher {
 	}
 
 	private UserMini findPodioUser(int zendeskUserId) {
-		User user = getZendeskUser(zendeskUserId);
-		if (user == null) {
+		User zendeskUser = getZendeskUser(zendeskUserId);
+		if (zendeskUser == null) {
 			return null;
 		}
 
-		if (user.getEmail() != null) {
-			List<UserMini> users = new ContactAPI(podioAPI).getSpaceContacts(
-					SPACE_ID, ProfileField.MAIL, user.getEmail().toLowerCase(),
-					null, null, ProfileType.MINI, null);
-			if (users.size() == 1) {
-				return users.get(0);
+		if (zendeskUser.getEmail() != null) {
+			List<UserMini> podioUsers = new ContactAPI(podioAPI)
+					.getSpaceContacts(SPACE_ID, ProfileField.MAIL, zendeskUser
+							.getEmail().toLowerCase(), null, null,
+							ProfileType.MINI, null);
+			if (podioUsers.size() == 1) {
+				return podioUsers.get(0);
 			}
 		}
 
-		if (user.getName() != null) {
-			List<UserMini> users = new ContactAPI(podioAPI).getSpaceContacts(
-					SPACE_ID, ProfileField.NAME, user.getName(), null, null,
-					ProfileType.MINI, null);
-			if (users.size() == 1) {
-				return users.get(0);
+		if (zendeskUser.getName() != null) {
+			List<UserMini> podioUsers = new ContactAPI(podioAPI)
+					.getSpaceContacts(SPACE_ID, ProfileField.NAME,
+							zendeskUser.getName(), null, null,
+							ProfileType.MINI, null);
+			if (podioUsers.size() == 1) {
+				return podioUsers.get(0);
 			}
 		}
 
@@ -154,26 +158,30 @@ public class ZendeskPublisher {
 		try {
 			return zendeskAPI.getUserAPI().getUser(zendeskUserId);
 		} catch (UniformInterfaceException e) {
-			e.printStackTrace();
+			System.out
+					.println("Unable to find Zendesk user: " + e.getMessage());
 			return null;
 		}
 	}
 
-	private List<FieldValues> getRequesterFields(User user, boolean uploadImage)
-			throws IOException {
+	private List<FieldValues> getRequesterFields(User zendeskUser,
+			boolean uploadImage) throws IOException {
 		List<FieldValues> fields = new ArrayList<FieldValues>();
 		fields.add(new FieldValues(REQUESTER_NAME, "value", StringUtils
-				.abbreviate(user.getName(), 128)));
-		if (user.getEmail() != null) {
-			fields.add(new FieldValues(REQUESTER_MAIL, "value", user.getEmail()));
+				.abbreviate(zendeskUser.getName(), 128)));
+		if (zendeskUser.getEmail() != null) {
+			fields.add(new FieldValues(REQUESTER_MAIL, "value", zendeskUser
+					.getEmail()));
 		}
-		if (user.getPhone() != null) {
-			fields.add(new FieldValues(REQUESTER_PHONE, "value", user
+		if (zendeskUser.getPhone() != null) {
+			fields.add(new FieldValues(REQUESTER_PHONE, "value", zendeskUser
 					.getPhone()));
 		}
-		if (user.getPhotoURL() != null && uploadImage
-				&& !user.getPhotoURL().getFile().endsWith("user_sm.png")) {
-			Integer photoImageId = upload(user.getPhotoURL(), null, null);
+		if (zendeskUser.getPhotoURL() != null
+				&& uploadImage
+				&& !zendeskUser.getPhotoURL().getFile()
+						.endsWith(DEFAULT_PHOTO_FILENAME)) {
+			Integer photoImageId = upload(zendeskUser.getPhotoURL(), null, null);
 			if (photoImageId != null) {
 				fields.add(new FieldValues(REQUESTER_PHOTO, "value",
 						photoImageId));
@@ -219,7 +227,8 @@ public class ZendeskPublisher {
 				if (podioValue != null) {
 					fields.add(new FieldValues(TICKET_TYPE, "value", podioValue));
 				} else {
-					System.out.println("Unknown type " + entry.getValue());
+					System.out.println("Unknown ticket type "
+							+ entry.getValue());
 				}
 			}
 		}
@@ -292,12 +301,6 @@ public class ZendeskPublisher {
 		}
 	}
 
-	private void updateTicket(int ticketId) throws IOException {
-		Ticket ticketZendesk = zendeskAPI.getTicketAPI().getTicket(ticketId);
-
-		updateTicket(ticketZendesk);
-	}
-
 	private void updateTicket(Ticket ticketZendesk) throws IOException {
 		ItemBadge ticketPodio = getPodioTicket(ticketZendesk.getId());
 		if (ticketPodio != null) {
@@ -310,12 +313,14 @@ public class ZendeskPublisher {
 						new ItemUpdate(Integer.toString(ticketZendesk.getId()),
 								fields), true);
 
-				// TagAPI tagAPI = new TagAPI(podioAPI);
-				// FIXME: Update tags
+				Reference itemReference = new Reference(ReferenceType.ITEM,
+						ticketPodio.getId());
+
+				new TagAPI(podioAPI).updateTags(itemReference,
+						ticketZendesk.getCurrentTags());
 
 				List<Comment> commentsPodio = new CommentAPI(podioAPI)
-						.getComments(new Reference(ReferenceType.ITEM,
-								ticketPodio.getId()));
+						.getComments(itemReference);
 				for (TicketComment commentZendesk : ticketZendesk.getComments()) {
 					boolean found = false;
 					for (Comment commentPodio : commentsPodio) {
@@ -387,7 +392,8 @@ public class ZendeskPublisher {
 		List<Integer> fileIds = new ArrayList<Integer>();
 		for (Attachment attachment : attachments) {
 			URL url = new URL("http://hoist.zendesk.com/attachments/token/"
-					+ attachment.getToken() + "/?name=image001.png");
+					+ attachment.getToken() + "/?name="
+					+ attachment.getFilename());
 
 			Integer fileId = upload(url, attachment.getFilename(), reference);
 			if (fileId != null) {
@@ -403,7 +409,8 @@ public class ZendeskPublisher {
 		try {
 			return new FileAPI(podioAPI).uploadImage(url, name, reference);
 		} catch (FileNotFoundException e) {
-			System.err.println(url + " was not found!");
+			System.err.println(url + " could not be uploaded: "
+					+ e.getMessage());
 			return null;
 		}
 	}
