@@ -437,7 +437,7 @@ public class ZendeskPublisher {
 	}
 
 	public static void main(String[] args) throws IOException {
-		ZendeskPublisher publisher = new ZendeskPublisher("config.properties");
+		ZendeskPublisher publisher = new ZendeskPublisher(args[0]);
 		// publisher.updateTicket(933);
 		publisher.updateTickets();
 	}
