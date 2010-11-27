@@ -50,24 +50,24 @@ public class ZendeskPublisher {
 	private static final int VIEW_ALL = 47845;
 	private static final int VIEW_UPDATED_LAST_HOUR = 1992333;
 
-	private static final int SPACE_ID = 208;
+	private static final int SPACE_ID = 207;
 
-	private static final int TICKET_APP_ID = 13731;
-	private static final int TICKET_TITLE = 74721;
-	private static final int TICKET_DESCRIPTION = 74722;
-	private static final int TICKET_FROM = 74759;
-	private static final int TICKET_ASSIGNEE = 74723;
-	private static final int TICKET_REQUESTER = 74743;
-	private static final int TICKET_TYPE = 74727;
-	private static final int TICKET_STATUS = 74760;
-	private static final int TICKET_SOURCE = 74728;
-	private static final int TICKET_LINK = 74758;
+	private static final int TICKET_APP_ID = 30910;
+	private static final int TICKET_TITLE = 183671;
+	private static final int TICKET_DESCRIPTION = 183672;
+	private static final int TICKET_LOCATION = 183675;
+	private static final int TICKET_ASSIGNEE = 183674;
+	private static final int TICKET_REQUESTER = 183684;
+	private static final int TICKET_TYPE = 183677;
+	private static final int TICKET_STATUS = 183673;
+	private static final int TICKET_SOURCE = 183678;
+	private static final int TICKET_ZENDESK = 183679;
 
-	private static final int REQUESTER_APP_ID = 13734;
-	private static final int REQUESTER_NAME = 74739;
-	private static final int REQUESTER_MAIL = 74740;
-	private static final int REQUESTER_PHONE = 74741;
-	private static final int REQUESTER_PHOTO = 74742;
+	private static final int REQUESTER_APP_ID = 30911;
+	private static final int REQUESTER_NAME = 183680;
+	private static final int REQUESTER_MAIL = 183681;
+	private static final int REQUESTER_PHONE = 183682;
+	private static final int REQUESTER_PHOTO = 183683;
 
 	private static final Pattern SUBMITTED_FROM_PATTERN = Pattern
 			.compile("Submitted from: (.*)");
@@ -203,7 +203,7 @@ public class ZendeskPublisher {
 		if (matcher.find()) {
 			String from = matcher.group(1);
 			if (from != null) {
-				fields.add(new FieldValues(TICKET_FROM, "value", from));
+				fields.add(new FieldValues(TICKET_LOCATION, "value", from));
 			}
 		}
 
@@ -238,7 +238,7 @@ public class ZendeskPublisher {
 			fields.add(new FieldValues(TICKET_SOURCE, "value",
 					toPodioState(ticket.getVia())));
 		}
-		fields.add(new FieldValues(TICKET_LINK, "value",
+		fields.add(new FieldValues(TICKET_ZENDESK, "value",
 				"http://hoist.zendesk.com/tickets/" + ticket.getId()));
 
 		return fields;
@@ -301,6 +301,12 @@ public class ZendeskPublisher {
 		}
 	}
 
+	public void updateTicket(int ticketIdZendesk) throws IOException {
+		Ticket ticketZendesk = zendeskAPI.getTicketAPI().getTicket(
+				ticketIdZendesk);
+		updateTicket(ticketZendesk);
+	}
+
 	private void updateTicket(Ticket ticketZendesk) throws IOException {
 		ItemBadge ticketPodio = getPodioTicket(ticketZendesk.getId());
 		if (ticketPodio != null) {
@@ -321,20 +327,8 @@ public class ZendeskPublisher {
 
 				List<Comment> commentsPodio = new CommentAPI(podioAPI)
 						.getComments(itemReference);
-				for (TicketComment commentZendesk : ticketZendesk.getComments()) {
-					boolean found = false;
-					for (Comment commentPodio : commentsPodio) {
-						if (commentPodio.getValue().contains(
-								commentZendesk.getValue())) {
-							found = true;
-						}
-					}
-
-					if (!found) {
-						uploadComment(ticketPodio.getId(),
-								ticketZendesk.getRequesterId(), commentZendesk);
-					}
-				}
+				updateComments(ticketZendesk, ticketPodio.getId(), false,
+						commentsPodio);
 			}
 		} else {
 			List<FieldValues> fields = getTicketFields(ticketZendesk);
@@ -346,14 +340,38 @@ public class ZendeskPublisher {
 							ticketZendesk.getCurrentTags()), true);
 			int ticketIdPodio = response.getItemId();
 
-			for (TicketComment comment : ticketZendesk.getComments()) {
-				uploadComment(ticketIdPodio, ticketZendesk.getRequesterId(),
-						comment);
+			updateComments(ticketZendesk, ticketIdPodio, true,
+					Collections.<Comment> emptyList());
+		}
+	}
+
+	private void updateComments(Ticket ticketZendesk, int ticketIdPodio,
+			boolean newTicket, List<Comment> commentsPodio) throws IOException {
+		for (TicketComment commentZendesk : ticketZendesk.getComments()) {
+			if (commentZendesk.getValue()
+					.equals(ticketZendesk.getDescription())) {
+				if (newTicket) {
+					uploadAttachment(commentZendesk.getAttachments(),
+							new Reference(ReferenceType.ITEM, ticketIdPodio));
+				}
+			} else {
+				boolean found = false;
+				for (Comment commentPodio : commentsPodio) {
+					if (commentPodio.getValue().contains(
+							commentZendesk.getValue())) {
+						found = true;
+					}
+				}
+
+				if (!found) {
+					addComment(ticketIdPodio, ticketZendesk.getRequesterId(),
+							commentZendesk);
+				}
 			}
 		}
 	}
 
-	private void uploadComment(int ticketIdPodio, int requesterIdZendesk,
+	private void addComment(int ticketIdPodio, int requesterIdZendesk,
 			TicketComment commentZendesk) throws IOException {
 		String commentText = commentZendesk.getValue();
 		commentText += "<br /><br />";
@@ -416,6 +434,8 @@ public class ZendeskPublisher {
 	}
 
 	public static void main(String[] args) throws IOException {
-		new ZendeskPublisher("config.properties").updateTickets();
+		ZendeskPublisher publisher = new ZendeskPublisher("config.properties");
+		// publisher.updateTicket(933);
+		publisher.updateTickets();
 	}
 }
