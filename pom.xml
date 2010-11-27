@@ -30,7 +30,7 @@
 								<transformer
 									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
-										<Main-Class>com.podio.twitter.TwitterReader</Main-Class>
+										<Main-Class>com.podio.integration.ZendeskPublisher</Main-Class>
 									</manifestEntries>
 								</transformer>
 								<transformer

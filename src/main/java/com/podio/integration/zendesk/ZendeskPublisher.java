@@ -47,8 +47,11 @@ import com.sun.jersey.api.client.UniformInterfaceException;
 public class ZendeskPublisher {
 
 	private static final String DEFAULT_PHOTO_FILENAME = "user_sm.png";
+	@SuppressWarnings("unused")
 	private static final int VIEW_ALL = 47845;
 	private static final int VIEW_UPDATED_LAST_HOUR = 1992333;
+
+	private static final boolean SILENT = false;
 
 	private static final int SPACE_ID = 207;
 
@@ -286,7 +289,7 @@ public class ZendeskPublisher {
 		int page = 1;
 		while (true) {
 			List<Ticket> tickets = zendeskAPI.getTicketAPI().getTickets(
-					VIEW_ALL, page);
+					VIEW_UPDATED_LAST_HOUR, page);
 			System.out.println("Doing page " + page + " with " + tickets.size()
 					+ " tickets");
 			for (Ticket ticket : tickets) {
@@ -317,7 +320,7 @@ public class ZendeskPublisher {
 
 				new ItemAPI(podioAPI).updateItem(ticketPodio.getId(),
 						new ItemUpdate(Integer.toString(ticketZendesk.getId()),
-								fields), true);
+								fields), SILENT);
 
 				Reference itemReference = new Reference(ReferenceType.ITEM,
 						ticketPodio.getId());
@@ -337,7 +340,7 @@ public class ZendeskPublisher {
 					TICKET_APP_ID,
 					new ItemCreate(Integer.toString(ticketZendesk.getId()),
 							fields, Collections.<Integer> emptyList(),
-							ticketZendesk.getCurrentTags()), true);
+							ticketZendesk.getCurrentTags()), SILENT);
 			int ticketIdPodio = response.getItemId();
 
 			updateComments(ticketZendesk, ticketIdPodio, true,
@@ -402,7 +405,7 @@ public class ZendeskPublisher {
 
 		new CommentAPI(podioAPI).addComment(new Reference(ReferenceType.ITEM,
 				ticketIdPodio), new CommentCreate(commentText, null,
-				Collections.<Integer> emptyList(), fileIds), true);
+				Collections.<Integer> emptyList(), fileIds), SILENT);
 	}
 
 	private List<Integer> uploadAttachment(List<Attachment> attachments,
