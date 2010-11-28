@@ -194,12 +194,23 @@ public class ZendeskPublisher {
 		return fields;
 	}
 
+	private String trimLocation(String text) {
+		int dashIdx = text.indexOf("------------------");
+		if (dashIdx != -1) {
+			return text.substring(0, dashIdx).trim();
+		} else {
+			return text;
+		}
+	}
+
 	private List<FieldValues> getTicketFields(Ticket ticket) throws IOException {
 		List<FieldValues> fields = new ArrayList<FieldValues>();
-		fields.add(new FieldValues(TICKET_TITLE, "value", StringUtils
-				.abbreviate(ticket.getDescription(), 128)));
-		fields.add(new FieldValues(TICKET_DESCRIPTION, "value", ticket
-				.getDescription()));
+		fields.add(new FieldValues(
+				TICKET_TITLE,
+				"value",
+				trimLocation(StringUtils.abbreviate(ticket.getDescription(), 96))));
+		fields.add(new FieldValues(TICKET_DESCRIPTION, "value",
+				trimLocation(ticket.getDescription())));
 
 		Matcher matcher = SUBMITTED_FROM_PATTERN.matcher(ticket
 				.getDescription());
@@ -320,7 +331,7 @@ public class ZendeskPublisher {
 
 				new ItemAPI(podioAPI).updateItem(ticketPodio.getId(),
 						new ItemUpdate(Integer.toString(ticketZendesk.getId()),
-								fields), SILENT);
+								fields), true);
 
 				Reference itemReference = new Reference(ReferenceType.ITEM,
 						ticketPodio.getId());
