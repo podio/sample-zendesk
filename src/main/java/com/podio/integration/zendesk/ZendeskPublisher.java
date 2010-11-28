@@ -203,12 +203,21 @@ public class ZendeskPublisher {
 		}
 	}
 
+	private String trimLineBreaks(String text) {
+		text = text.replace('\n', ' ');
+		text = text.replace('\r', ' ');
+		while (text.contains("  ")) {
+			text = text.replace("  ", " ");
+		}
+
+		return text;
+	}
+
 	private List<FieldValues> getTicketFields(Ticket ticket) throws IOException {
 		List<FieldValues> fields = new ArrayList<FieldValues>();
-		fields.add(new FieldValues(
-				TICKET_TITLE,
-				"value",
-				trimLocation(StringUtils.abbreviate(ticket.getDescription(), 96))));
+		fields.add(new FieldValues(TICKET_TITLE, "value",
+				trimLineBreaks(trimLocation(StringUtils.abbreviate(
+						ticket.getDescription(), 96)))));
 		fields.add(new FieldValues(TICKET_DESCRIPTION, "value",
 				trimLocation(ticket.getDescription())));
 
