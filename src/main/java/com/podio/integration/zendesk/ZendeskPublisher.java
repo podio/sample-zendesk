@@ -243,15 +243,18 @@ public class ZendeskPublisher {
 			fields.add(new FieldValues(TICKET_REQUESTER, "value",
 					podioRequesterId));
 		}
-		for (TicketFieldEntry entry : ticket.getEntries()) {
-			if (entry.getFieldId() == 87154
-					&& StringUtils.isNotBlank(entry.getValue())) {
-				String podioValue = TYPE_MAP.get(entry.getValue());
-				if (podioValue != null) {
-					fields.add(new FieldValues(TICKET_TYPE, "value", podioValue));
-				} else {
-					System.out.println("Unknown ticket type "
-							+ entry.getValue());
+		if (ticket.getEntries() != null) {
+			for (TicketFieldEntry entry : ticket.getEntries()) {
+				if (entry.getFieldId() == 87154
+						&& StringUtils.isNotBlank(entry.getValue())) {
+					String podioValue = TYPE_MAP.get(entry.getValue());
+					if (podioValue != null) {
+						fields.add(new FieldValues(TICKET_TYPE, "value",
+								podioValue));
+					} else {
+						System.out.println("Unknown ticket type "
+								+ entry.getValue());
+					}
 				}
 			}
 		}
@@ -370,25 +373,28 @@ public class ZendeskPublisher {
 
 	private void updateComments(Ticket ticketZendesk, int ticketIdPodio,
 			boolean newTicket, List<Comment> commentsPodio) throws IOException {
-		for (TicketComment commentZendesk : ticketZendesk.getComments()) {
-			if (commentZendesk.getValue()
-					.equals(ticketZendesk.getDescription())) {
-				if (newTicket) {
-					uploadAttachment(commentZendesk.getAttachments(),
-							new Reference(ReferenceType.ITEM, ticketIdPodio));
-				}
-			} else {
-				boolean found = false;
-				for (Comment commentPodio : commentsPodio) {
-					if (commentPodio.getValue().contains(
-							commentZendesk.getValue())) {
-						found = true;
+		if (ticketZendesk.getComments() != null) {
+			for (TicketComment commentZendesk : ticketZendesk.getComments()) {
+				if (commentZendesk.getValue().equals(
+						ticketZendesk.getDescription())) {
+					if (newTicket) {
+						uploadAttachment(
+								commentZendesk.getAttachments(),
+								new Reference(ReferenceType.ITEM, ticketIdPodio));
 					}
-				}
+				} else {
+					boolean found = false;
+					for (Comment commentPodio : commentsPodio) {
+						if (commentPodio.getValue().contains(
+								commentZendesk.getValue())) {
+							found = true;
+						}
+					}
 
-				if (!found) {
-					addComment(ticketIdPodio, ticketZendesk.getRequesterId(),
-							commentZendesk);
+					if (!found) {
+						addComment(ticketIdPodio,
+								ticketZendesk.getRequesterId(), commentZendesk);
+					}
 				}
 			}
 		}
