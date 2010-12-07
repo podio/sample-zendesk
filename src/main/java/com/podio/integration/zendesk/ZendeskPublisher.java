@@ -316,7 +316,7 @@ public class ZendeskPublisher {
 			System.out.println("Doing page " + page + " with " + tickets.size()
 					+ " tickets");
 			for (Ticket ticket : tickets) {
-				updateTicket(ticket);
+				updateTicket(ticket.getId());
 			}
 
 			page++;
@@ -373,6 +373,7 @@ public class ZendeskPublisher {
 
 	private void updateComments(Ticket ticketZendesk, int ticketIdPodio,
 			boolean newTicket, List<Comment> commentsPodio) throws IOException {
+		System.out.println(ticketZendesk.getComments());
 		if (ticketZendesk.getComments() != null) {
 			for (TicketComment commentZendesk : ticketZendesk.getComments()) {
 				if (commentZendesk.getValue().equals(
