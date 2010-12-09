@@ -25,11 +25,10 @@ import com.podio.contact.ContactAPI;
 import com.podio.contact.ProfileField;
 import com.podio.contact.ProfileType;
 import com.podio.file.FileAPI;
-import com.podio.item.FieldValues;
+import com.podio.item.FieldValuesUpdate;
 import com.podio.item.ItemAPI;
 import com.podio.item.ItemBadge;
 import com.podio.item.ItemCreate;
-import com.podio.item.ItemCreateResponse;
 import com.podio.item.ItemUpdate;
 import com.podio.item.ItemsResponse;
 import com.podio.oauth.OAuthClientCredentials;
@@ -167,18 +166,18 @@ public class ZendeskPublisher {
 		}
 	}
 
-	private List<FieldValues> getRequesterFields(User zendeskUser,
+	private List<FieldValuesUpdate> getRequesterFields(User zendeskUser,
 			boolean uploadImage) throws IOException {
-		List<FieldValues> fields = new ArrayList<FieldValues>();
-		fields.add(new FieldValues(REQUESTER_NAME, "value", StringUtils
+		List<FieldValuesUpdate> fields = new ArrayList<FieldValuesUpdate>();
+		fields.add(new FieldValuesUpdate(REQUESTER_NAME, "value", StringUtils
 				.abbreviate(zendeskUser.getName(), 128)));
 		if (zendeskUser.getEmail() != null) {
-			fields.add(new FieldValues(REQUESTER_MAIL, "value", zendeskUser
-					.getEmail()));
+			fields.add(new FieldValuesUpdate(REQUESTER_MAIL, "value",
+					zendeskUser.getEmail()));
 		}
 		if (zendeskUser.getPhone() != null) {
-			fields.add(new FieldValues(REQUESTER_PHONE, "value", zendeskUser
-					.getPhone()));
+			fields.add(new FieldValuesUpdate(REQUESTER_PHONE, "value",
+					zendeskUser.getPhone()));
 		}
 		if (zendeskUser.getPhotoURL() != null
 				&& uploadImage
@@ -186,7 +185,7 @@ public class ZendeskPublisher {
 						.endsWith(DEFAULT_PHOTO_FILENAME)) {
 			Integer photoImageId = upload(zendeskUser.getPhotoURL(), null, null);
 			if (photoImageId != null) {
-				fields.add(new FieldValues(REQUESTER_PHOTO, "value",
+				fields.add(new FieldValuesUpdate(REQUESTER_PHOTO, "value",
 						photoImageId));
 			}
 		}
@@ -213,12 +212,13 @@ public class ZendeskPublisher {
 		return text;
 	}
 
-	private List<FieldValues> getTicketFields(Ticket ticket) throws IOException {
-		List<FieldValues> fields = new ArrayList<FieldValues>();
-		fields.add(new FieldValues(TICKET_TITLE, "value",
+	private List<FieldValuesUpdate> getTicketFields(Ticket ticket)
+			throws IOException {
+		List<FieldValuesUpdate> fields = new ArrayList<FieldValuesUpdate>();
+		fields.add(new FieldValuesUpdate(TICKET_TITLE, "value",
 				trimLineBreaks(trimLocation(StringUtils.abbreviate(
 						ticket.getDescription(), 96)))));
-		fields.add(new FieldValues(TICKET_DESCRIPTION, "value",
+		fields.add(new FieldValuesUpdate(TICKET_DESCRIPTION, "value",
 				trimLocation(ticket.getDescription())));
 
 		Matcher matcher = SUBMITTED_FROM_PATTERN.matcher(ticket
@@ -226,21 +226,21 @@ public class ZendeskPublisher {
 		if (matcher.find()) {
 			String from = matcher.group(1);
 			if (from != null) {
-				fields.add(new FieldValues(TICKET_LOCATION, "value", from));
+				fields.add(new FieldValuesUpdate(TICKET_LOCATION, "value", from));
 			}
 		}
 
 		if (ticket.getAssigneeId() != null) {
 			UserMini podioUser = findPodioUser(ticket.getAssigneeId());
 			if (podioUser != null) {
-				fields.add(new FieldValues(TICKET_ASSIGNEE, "value", podioUser
-						.getId()));
+				fields.add(new FieldValuesUpdate(TICKET_ASSIGNEE, "value",
+						podioUser.getId()));
 			}
 		}
 
 		Integer podioRequesterId = updateRequester(ticket.getRequesterId());
 		if (podioRequesterId != null) {
-			fields.add(new FieldValues(TICKET_REQUESTER, "value",
+			fields.add(new FieldValuesUpdate(TICKET_REQUESTER, "value",
 					podioRequesterId));
 		}
 		if (ticket.getEntries() != null) {
@@ -249,7 +249,7 @@ public class ZendeskPublisher {
 						&& StringUtils.isNotBlank(entry.getValue())) {
 					String podioValue = TYPE_MAP.get(entry.getValue());
 					if (podioValue != null) {
-						fields.add(new FieldValues(TICKET_TYPE, "value",
+						fields.add(new FieldValuesUpdate(TICKET_TYPE, "value",
 								podioValue));
 					} else {
 						System.out.println("Unknown ticket type "
@@ -258,13 +258,13 @@ public class ZendeskPublisher {
 				}
 			}
 		}
-		fields.add(new FieldValues(TICKET_STATUS, "value", toPodioState(ticket
-				.getStatus())));
+		fields.add(new FieldValuesUpdate(TICKET_STATUS, "value",
+				toPodioState(ticket.getStatus())));
 		if (ticket.getVia() != null) {
-			fields.add(new FieldValues(TICKET_SOURCE, "value",
+			fields.add(new FieldValuesUpdate(TICKET_SOURCE, "value",
 					toPodioState(ticket.getVia())));
 		}
-		fields.add(new FieldValues(TICKET_ZENDESK, "value",
+		fields.add(new FieldValuesUpdate(TICKET_ZENDESK, "value",
 				"http://hoist.zendesk.com/tickets/" + ticket.getId()));
 
 		return fields;
@@ -286,8 +286,8 @@ public class ZendeskPublisher {
 		if (requesterPodio != null) {
 			if (requesterPodio.getCurrentRevision().getCreatedOn()
 					.isBefore(requesterZendesk.getUpdatedAt())) {
-				List<FieldValues> fields = getRequesterFields(requesterZendesk,
-						false);
+				List<FieldValuesUpdate> fields = getRequesterFields(
+						requesterZendesk, false);
 
 				new ItemAPI(podioAPI).updateItem(requesterPodio.getId(),
 						new ItemUpdate(Integer.toString(requesterZendeskId),
@@ -296,15 +296,13 @@ public class ZendeskPublisher {
 
 			return requesterPodio.getId();
 		} else {
-			List<FieldValues> fields = getRequesterFields(requesterZendesk,
-					true);
+			List<FieldValuesUpdate> fields = getRequesterFields(
+					requesterZendesk, true);
 
-			ItemCreateResponse response = new ItemAPI(podioAPI).addItem(
-					REQUESTER_APP_ID,
+			return new ItemAPI(podioAPI).addItem(REQUESTER_APP_ID,
 					new ItemCreate(Integer.toString(requesterZendeskId),
 							fields, Collections.<Integer> emptyList(),
 							Collections.<String> emptyList()), true);
-			return response.getItemId();
 		}
 	}
 
@@ -339,7 +337,7 @@ public class ZendeskPublisher {
 			boolean before = ticketPodio.getCurrentRevision().getCreatedOn()
 					.isBefore(ticketZendesk.getUpdatedAt());
 			if (before) {
-				List<FieldValues> fields = getTicketFields(ticketZendesk);
+				List<FieldValuesUpdate> fields = getTicketFields(ticketZendesk);
 
 				new ItemAPI(podioAPI).updateItem(ticketPodio.getId(),
 						new ItemUpdate(Integer.toString(ticketZendesk.getId()),
@@ -357,14 +355,12 @@ public class ZendeskPublisher {
 						commentsPodio);
 			}
 		} else {
-			List<FieldValues> fields = getTicketFields(ticketZendesk);
+			List<FieldValuesUpdate> fields = getTicketFields(ticketZendesk);
 
-			ItemCreateResponse response = new ItemAPI(podioAPI).addItem(
-					TICKET_APP_ID,
+			int ticketIdPodio = new ItemAPI(podioAPI).addItem(TICKET_APP_ID,
 					new ItemCreate(Integer.toString(ticketZendesk.getId()),
 							fields, Collections.<Integer> emptyList(),
 							ticketZendesk.getCurrentTags()), SILENT);
-			int ticketIdPodio = response.getItemId();
 
 			updateComments(ticketZendesk, ticketIdPodio, true,
 					Collections.<Comment> emptyList());
