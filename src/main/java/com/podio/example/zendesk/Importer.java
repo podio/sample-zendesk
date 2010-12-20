@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 
-import com.podio.BaseAPI;
+import com.podio.ResourceFactory;
 import com.podio.comment.Comment;
 import com.podio.comment.CommentAPI;
 import com.podio.comment.CommentCreate;
@@ -84,7 +84,7 @@ public class Importer {
 
 	private final APIFactory zendeskAPI;
 
-	private final BaseAPI podioAPI;
+	private final ResourceFactory podioAPI;
 
 	private Importer(String configFile) throws IOException {
 		super();
@@ -97,7 +97,7 @@ public class Importer {
 				Boolean.parseBoolean(properties.getProperty("zendesk.ssl")),
 				properties.getProperty("zendesk.username"),
 				properties.getProperty("zendesk.password"));
-		this.podioAPI = new BaseAPI(properties.getProperty("podio.api"),
+		this.podioAPI = new ResourceFactory(properties.getProperty("podio.api"),
 				properties.getProperty("podio.upload"), 443, true, false,
 				new OAuthClientCredentials(properties
 						.getProperty("podio.client.mail"), properties
