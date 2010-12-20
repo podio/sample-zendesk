@@ -1,4 +1,4 @@
-package com.podio.integration.zendesk;
+package com.podio.example.zendesk;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -25,6 +25,12 @@ import com.podio.contact.ContactAPI;
 import com.podio.contact.ProfileField;
 import com.podio.contact.ProfileType;
 import com.podio.file.FileAPI;
+import com.podio.integration.zendesk.APIFactory;
+import com.podio.integration.zendesk.attachment.Attachment;
+import com.podio.integration.zendesk.ticket.Ticket;
+import com.podio.integration.zendesk.ticket.TicketComment;
+import com.podio.integration.zendesk.ticket.TicketFieldEntry;
+import com.podio.integration.zendesk.user.User;
 import com.podio.item.FieldValuesUpdate;
 import com.podio.item.ItemAPI;
 import com.podio.item.ItemBadge;
@@ -35,15 +41,9 @@ import com.podio.oauth.OAuthClientCredentials;
 import com.podio.oauth.OAuthUsernameCredentials;
 import com.podio.tag.TagAPI;
 import com.podio.user.UserMini;
-import com.podio.zendesk.APIFactory;
-import com.podio.zendesk.attachment.Attachment;
-import com.podio.zendesk.ticket.Ticket;
-import com.podio.zendesk.ticket.TicketComment;
-import com.podio.zendesk.ticket.TicketFieldEntry;
-import com.podio.zendesk.user.User;
 import com.sun.jersey.api.client.UniformInterfaceException;
 
-public class ZendeskPublisher {
+public class Importer {
 
 	private static final String DEFAULT_PHOTO_FILENAME = "user_sm.png";
 	@SuppressWarnings("unused")
@@ -86,7 +86,7 @@ public class ZendeskPublisher {
 
 	private final BaseAPI podioAPI;
 
-	private ZendeskPublisher(String configFile) throws IOException {
+	private Importer(String configFile) throws IOException {
 		super();
 
 		Properties properties = new Properties();
@@ -460,7 +460,7 @@ public class ZendeskPublisher {
 	}
 
 	public static void main(String[] args) throws IOException {
-		ZendeskPublisher publisher = new ZendeskPublisher(args[0]);
+		Importer publisher = new Importer(args[0]);
 		// publisher.updateTicket(933);
 		publisher.updateTickets();
 	}
