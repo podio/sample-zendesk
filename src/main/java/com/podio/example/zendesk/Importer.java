@@ -40,7 +40,7 @@ import com.podio.item.ItemsResponse;
 import com.podio.oauth.OAuthClientCredentials;
 import com.podio.oauth.OAuthUsernameCredentials;
 import com.podio.tag.TagAPI;
-import com.podio.user.UserMini;
+import com.podio.user.UserProfileMini;
 import com.sun.jersey.api.client.UniformInterfaceException;
 
 public class Importer {
@@ -127,14 +127,14 @@ public class Importer {
 		return response.getItems().get(0);
 	}
 
-	private UserMini findPodioUser(int zendeskUserId) {
+	private UserProfileMini findPodioUser(int zendeskUserId) {
 		User zendeskUser = getZendeskUser(zendeskUserId);
 		if (zendeskUser == null) {
 			return null;
 		}
 
 		if (zendeskUser.getEmail() != null) {
-			List<UserMini> podioUsers = new ContactAPI(podioAPI)
+			List<UserProfileMini> podioUsers = new ContactAPI(podioAPI)
 					.getSpaceContacts(SPACE_ID, ProfileField.MAIL, zendeskUser
 							.getEmail().toLowerCase(), null, null,
 							ProfileType.MINI, null);
@@ -144,7 +144,7 @@ public class Importer {
 		}
 
 		if (zendeskUser.getName() != null) {
-			List<UserMini> podioUsers = new ContactAPI(podioAPI)
+			List<UserProfileMini> podioUsers = new ContactAPI(podioAPI)
 					.getSpaceContacts(SPACE_ID, ProfileField.NAME,
 							zendeskUser.getName(), null, null,
 							ProfileType.MINI, null);
@@ -231,7 +231,7 @@ public class Importer {
 		}
 
 		if (ticket.getAssigneeId() != null) {
-			UserMini podioUser = findPodioUser(ticket.getAssigneeId());
+			UserProfileMini podioUser = findPodioUser(ticket.getAssigneeId());
 			if (podioUser != null) {
 				fields.add(new FieldValuesUpdate(TICKET_ASSIGNEE, "value",
 						podioUser.getId()));
@@ -411,7 +411,7 @@ public class Importer {
 				commentText += "Unknown";
 			}
 		} else {
-			UserMini podioUser = findPodioUser(commentZendesk.getAuthorId());
+			UserProfileMini podioUser = findPodioUser(commentZendesk.getAuthorId());
 			if (podioUser != null) {
 				commentText += "<a href=\"https://podio.com/contacts/"
 						+ podioUser.getId() + "\">" + podioUser.getName()
