@@ -1,4 +1,4 @@
-package com.podio.example.zendesk;
+package com.podio.sample.zendesk;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
