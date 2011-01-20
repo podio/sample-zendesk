@@ -46,7 +46,7 @@ import com.sun.jersey.api.client.UniformInterfaceException;
 public class Importer {
 
 	private static final String DEFAULT_PHOTO_FILENAME = "user_sm.png";
-	@SuppressWarnings("unused")
+
 	private static final int VIEW_ALL = 47845;
 	private static final int VIEW_UPDATED_LAST_HOUR = 1992333;
 
@@ -97,7 +97,8 @@ public class Importer {
 				Boolean.parseBoolean(properties.getProperty("zendesk.ssl")),
 				properties.getProperty("zendesk.username"),
 				properties.getProperty("zendesk.password"));
-		this.podioAPI = new ResourceFactory(properties.getProperty("podio.api"),
+		this.podioAPI = new ResourceFactory(
+				properties.getProperty("podio.api"),
 				properties.getProperty("podio.upload"), 443, true, false,
 				new OAuthClientCredentials(properties
 						.getProperty("podio.client.mail"), properties
@@ -306,11 +307,11 @@ public class Importer {
 		}
 	}
 
-	public void updateTickets() throws IOException {
+	public void updateTickets(int view) throws IOException {
 		int page = 1;
 		while (true) {
-			List<Ticket> tickets = zendeskAPI.getTicketAPI().getTickets(
-					VIEW_UPDATED_LAST_HOUR, page);
+			List<Ticket> tickets = zendeskAPI.getTicketAPI().getTickets(view,
+					page);
 			System.out.println("Doing page " + page + " with " + tickets.size()
 					+ " tickets");
 			for (Ticket ticket : tickets) {
@@ -323,6 +324,14 @@ public class Importer {
 				return;
 			}
 		}
+	}
+
+	public void updateTicketsAll() throws IOException {
+		updateTickets(VIEW_ALL);
+	}
+
+	public void updateTicketsRecent() throws IOException {
+		updateTickets(VIEW_UPDATED_LAST_HOUR);
 	}
 
 	public void updateTicket(int ticketIdZendesk) throws IOException {
@@ -411,7 +420,8 @@ public class Importer {
 				commentText += "Unknown";
 			}
 		} else {
-			UserProfileMini podioUser = findPodioUser(commentZendesk.getAuthorId());
+			UserProfileMini podioUser = findPodioUser(commentZendesk
+					.getAuthorId());
 			if (podioUser != null) {
 				commentText += "<a href=\"https://podio.com/contacts/"
 						+ podioUser.getId() + "\">" + podioUser.getName()
@@ -435,7 +445,7 @@ public class Importer {
 			Reference reference) throws IOException {
 		List<Integer> fileIds = new ArrayList<Integer>();
 		for (Attachment attachment : attachments) {
-			URL url = new URL("http://hoist.zendesk.com/attachments/token/"
+			URL url = new URL("https://hoist.zendesk.com/attachments/token/"
 					+ attachment.getToken() + "/?name="
 					+ attachment.getFilename());
 
@@ -461,7 +471,7 @@ public class Importer {
 
 	public static void main(String[] args) throws IOException {
 		Importer publisher = new Importer(args[0]);
-		// publisher.updateTicket(933);
-		publisher.updateTickets();
+		// publisher.updateTicket(1153);
+		publisher.updateTicketsRecent();
 	}
 }
