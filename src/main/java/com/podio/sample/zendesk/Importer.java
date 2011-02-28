@@ -22,6 +22,7 @@ import com.podio.comment.CommentCreate;
 import com.podio.common.Reference;
 import com.podio.common.ReferenceType;
 import com.podio.contact.ContactAPI;
+import com.podio.contact.Profile;
 import com.podio.contact.ProfileField;
 import com.podio.contact.ProfileType;
 import com.podio.file.FileAPI;
@@ -40,7 +41,6 @@ import com.podio.item.ItemsResponse;
 import com.podio.oauth.OAuthClientCredentials;
 import com.podio.oauth.OAuthUsernameCredentials;
 import com.podio.tag.TagAPI;
-import com.podio.user.UserProfileMini;
 import com.sun.jersey.api.client.UniformInterfaceException;
 
 public class Importer {
@@ -97,12 +97,9 @@ public class Importer {
 				Boolean.parseBoolean(properties.getProperty("zendesk.ssl")),
 				properties.getProperty("zendesk.username"),
 				properties.getProperty("zendesk.password"));
-		this.podioAPI = new ResourceFactory(
-				properties.getProperty("podio.api"),
-				properties.getProperty("podio.upload"), 443, true, false,
-				new OAuthClientCredentials(properties
-						.getProperty("podio.client.mail"), properties
-						.getProperty("podio.client.secret")),
+		this.podioAPI = new ResourceFactory(new OAuthClientCredentials(
+				properties.getProperty("podio.client.mail"),
+				properties.getProperty("podio.client.secret")),
 				new OAuthUsernameCredentials(properties
 						.getProperty("podio.user.mail"), properties
 						.getProperty("podio.user.password")));
@@ -128,27 +125,27 @@ public class Importer {
 		return response.getItems().get(0);
 	}
 
-	private UserProfileMini findPodioUser(int zendeskUserId) {
+	private Profile findPodioContact(int zendeskUserId) {
 		User zendeskUser = getZendeskUser(zendeskUserId);
 		if (zendeskUser == null) {
 			return null;
 		}
 
 		if (zendeskUser.getEmail() != null) {
-			List<UserProfileMini> podioUsers = new ContactAPI(podioAPI)
+			List<Profile> podioUsers = new ContactAPI(podioAPI)
 					.getSpaceContacts(SPACE_ID, ProfileField.MAIL, zendeskUser
 							.getEmail().toLowerCase(), null, null,
-							ProfileType.MINI, null);
+							ProfileType.FULL, null);
 			if (podioUsers.size() == 1) {
 				return podioUsers.get(0);
 			}
 		}
 
 		if (zendeskUser.getName() != null) {
-			List<UserProfileMini> podioUsers = new ContactAPI(podioAPI)
+			List<Profile> podioUsers = new ContactAPI(podioAPI)
 					.getSpaceContacts(SPACE_ID, ProfileField.NAME,
 							zendeskUser.getName(), null, null,
-							ProfileType.MINI, null);
+							ProfileType.FULL, null);
 			if (podioUsers.size() == 1) {
 				return podioUsers.get(0);
 			}
@@ -232,10 +229,10 @@ public class Importer {
 		}
 
 		if (ticket.getAssigneeId() != null) {
-			UserProfileMini podioUser = findPodioUser(ticket.getAssigneeId());
+			Profile podioUser = findPodioContact(ticket.getAssigneeId());
 			if (podioUser != null) {
 				fields.add(new FieldValuesUpdate(TICKET_ASSIGNEE, "value",
-						podioUser.getId()));
+						podioUser.getProfileId()));
 			}
 		}
 
@@ -420,11 +417,10 @@ public class Importer {
 				commentText += "Unknown";
 			}
 		} else {
-			UserProfileMini podioUser = findPodioUser(commentZendesk
-					.getAuthorId());
+			Profile podioUser = findPodioContact(commentZendesk.getAuthorId());
 			if (podioUser != null) {
 				commentText += "<a href=\"https://podio.com/contacts/"
-						+ podioUser.getId() + "\">" + podioUser.getName()
+						+ podioUser.getUserId() + "\">" + podioUser.getName()
 						+ "</a>";
 			} else {
 				User zendeskUser = getZendeskUser(commentZendesk.getAuthorId());
